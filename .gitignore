@@ -5,6 +5,12 @@
 serverpack/mods/
 serverpack/packwiz.json
 
+# Tooling jars - fetched by setup-tools.ps1. packwiz-installer.jar in particular
+# is written by the bootstrap at runtime as it self-updates, so tracking it means
+# a spurious diff on every single drop.
+packwiz-installer-bootstrap.jar
+packwiz-installer.jar
+
 # Exported packs
 *.zip
 *.mrpack
