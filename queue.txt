@@ -1,0 +1,82 @@
+# RDC SEASON 2 - DROP QUEUE
+#
+# Every slug below was verified against Fabric 1.21.1 on the Modrinth API.
+# Re-verify before each session:   .\scripts\check-queue.ps1
+# Drop one:                        .\scripts\drop.ps1 -Mod <slug>
+#
+# Ordered roughly by how well it reads on camera in the first 60 seconds.
+# Uncomment / reorder freely - lines starting with # are ignored.
+#
+# ---------------------------------------------------------------------------
+# TIER 1 - HOT. Small download, instant visible payoff, safe mid-world.
+# These are your bread-and-butter two-hour drops.
+# ---------------------------------------------------------------------------
+
+carry-on                  # 0.3MB - pick up chests AND live mobs. Instant chaos.
+do-a-barrel-roll          # 0.5MB - elytra becomes a flight sim. Reads in 5 seconds.
+mutant-monsters           # 1.3MB - mutant creepers/zombies. Scary + funny.
+creeper-overhaul          # 1.1MB - biome-specific creepers, immediately visible.
+veinminer                 # 0.6MB - whole vein at once. Everyone notices instantly.
+better-combat             # 0.9MB - melee feels completely different on first swing.
+saros-player-ragdoll      # 7.1MB - players ragdoll on death. Pure comedy.
+elytra-slot               # 0.1MB - elytra + chestplate together.
+charm-of-undying          # 0.5MB - totem works from an accessory slot.
+comforts                  # 0.9MB - sleeping bags, no set-spawn.
+icarus                    # 0.5MB - cosmetic wings.
+
+# ---------------------------------------------------------------------------
+# TIER 2 - WARM. Bigger download or slower payoff. Fine live, just budget
+# a couple more minutes for the sync.
+# ---------------------------------------------------------------------------
+
+immersive-aircraft        # 2.3MB - planes and airships.
+small-ships               # 2.3MB - sailable ships with cannons.
+automobility              # 1.3MB - actual cars.
+travelersbackpack         # 1.4MB - upgradeable backpacks.
+waystones                 # 1.2MB - teleport network. Changes the map's shape.
+simply-swords             # 12.0MB - spears, glaives, katanas.
+wizards                   # 4.3MB - spellcasting. Pulls in spell-engine + spell-power.
+supplementaries           # 12.7MB - huge decorative/utility grab bag.
+
+# ---------------------------------------------------------------------------
+# TIER 3 - CLIENT-ONLY. No server restart needed at all. Good filler drops
+# when you want a beat without the full stop-everything cost.
+# ---------------------------------------------------------------------------
+
+not-enough-animations     # 1.9MB - third-person animations for everything.
+3dskinlayers              # 1.9MB - skins render in 3D.
+first-person-model        # 1.5MB - see your own body.
+eating-animation          # 1.0MB - food animates as you eat it.
+
+# ---------------------------------------------------------------------------
+# TIER 4 - FINALE. Save these. They change the rules of the whole server,
+# so they only work once and they work best last.
+# ---------------------------------------------------------------------------
+
+entropy                   # 7.8MB - random chaos event every 30 seconds, 120+ events.
+april-fools               # 0.2MB - configurable pile of cursed vanilla changes.
+litephysics               # 0.1MB - block debris, collapse, item physics.
+
+# ---------------------------------------------------------------------------
+# HAS WORLDGEN - these tag as worldgen on Modrinth. Their MOBS still spawn in
+# existing chunks, but their STRUCTURES only appear in fresh terrain. Put them
+# in the base pack at world creation, not in a live drop, or the reveal lands
+# on nothing.
+# ---------------------------------------------------------------------------
+
+# friends-and-foes        # 4.9MB - mob-vote losers. Mobs spawn fine, structures don't.
+# naturalist              # 10.7MB - 47 animals. Mostly fine live, some biome-gated.
+# bosses-of-mass-destruction  # 2.6MB - bosses live in generated structures.
+
+# ---------------------------------------------------------------------------
+# CHECKED AND REJECTED - do not waste session time on these
+# ---------------------------------------------------------------------------
+#
+# create / create-fabric      Create 6.x on 1.21.1 is NEOFORGE ONLY. Create Fabric
+#                             has zero 1.21.1 builds. This is the single biggest
+#                             thing you give up by being on Fabric.
+# alexs-mobs                  no 1.21.1 build
+# sophisticated-backpacks     no 1.21.1 build
+# ad-astra                    no 1.21.1 build
+# l-ender-s-cataclysm         Forge/NeoForge only
+# goblintraders               not on Modrinth under that slug

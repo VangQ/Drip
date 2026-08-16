@@ -1,0 +1,12 @@
+# Disable Git line-ending conversion.
+#
+# THIS FILE IS LOAD-BEARING. Do not delete it.
+#
+# packwiz hashes every file in the index with sha256. On Windows, Git's autocrlf
+# rewrites LF -> CRLF on checkout, which changes those hashes, which makes every
+# client fail with "hash invalid" when packwiz-installer verifies the pack.
+# The failure looks like a corrupt download, not a line-ending bug, and it will
+# take the whole cast offline mid-session.
+#
+# If this file is ever added late, run:  git add --renormalize .
+* -text
