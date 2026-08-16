@@ -68,8 +68,37 @@ foreach ($junk in 'mods', 'config', 'saves', 'logs', 'crash-reports', 'packwiz.j
 }
 
 Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
-Compress-Archive -Path "$Staging\*" -DestinationPath $OutFile -Force
+
+# Built by hand rather than with Compress-Archive on purpose.
+#
+# PowerShell 5.1's Compress-Archive writes Windows path separators into the zip
+# central directory (".minecraft\file" instead of ".minecraft/file"). The zip
+# spec requires forward slashes, and Prism's extractor can end up creating a
+# single literal file named ".minecraft\..." instead of the folder - which means
+# the bootstrap jar is not where instance.cfg expects it, the pre-launch command
+# silently fails, and the instance launches with zero mods. For everyone.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::Open($OutFile, 'Create')
+try {
+    $staged = Get-ChildItem $Staging -Recurse -File
+    foreach ($f in $staged) {
+        $rel = $f.FullName.Substring($Staging.Length + 1) -replace '\\', '/'
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $rel) | Out-Null
+    }
+}
+finally { $zip.Dispose() }
 Remove-Item $Staging -Recurse -Force
+
+# fail loudly rather than shipping a broken zip to six people
+$verify = [System.IO.Compression.ZipFile]::OpenRead($OutFile)
+try {
+    $names = @($verify.Entries | ForEach-Object { $_.FullName })
+    if ($names -join '' -match '\\') { throw "zip contains backslash separators: $($names -join ', ')" }
+    if ($names -notcontains '.minecraft/packwiz-installer-bootstrap.jar') { throw 'bootstrap jar missing from zip' }
+    if ($names -notcontains 'instance.cfg') { throw 'instance.cfg missing from zip' }
+    if ($names -notcontains 'mmc-pack.json') { throw 'mmc-pack.json missing from zip' }
+}
+finally { $verify.Dispose() }
 
 $size = [int]((Get-Item $OutFile).Length / 1KB)
 Write-Host ''
