@@ -55,6 +55,21 @@ $LoaderVer  = '0.19.3'
 $InstallVer = '1.1.2'
 $ServerJar  = 'fabric-server-launch.jar'
 
+# Native programs that write to stderr (packwiz and packwiz-installer both do on
+# their failure paths) raise a terminating NativeCommandError under
+# $ErrorActionPreference='Stop' in PowerShell 5.1 - even when the program exits 0.
+# Unguarded, that kills the whole run on the first mod that has anything to say.
+# Capture output with the preference relaxed and judge success by exit code.
+function Invoke-Native {
+    param([Parameter(Mandatory)][scriptblock]$Block)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try   { $out = (& $Block 2>&1 | Out-String) }
+    catch { $out = $_.Exception.Message; $global:LASTEXITCODE = 1 }
+    finally { $ErrorActionPreference = $prev }
+    return $out
+}
+
 function Say ([string]$m) { Write-Host "  $m" -ForegroundColor Gray }
 function Good([string]$m) { Write-Host "  $m" -ForegroundColor Green }
 function Bad ([string]$m) { Write-Host "  $m" -ForegroundColor Red }
@@ -193,7 +208,7 @@ if (-not (Test-Path $Snapshot)) {
     # baseline: the real pack's server-side mods, nothing extra
     Remove-Item $Scratch -Recurse -Force -ErrorAction SilentlyContinue
     Copy-Item $PackDir $Scratch -Recurse -Force
-    & java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') 2>&1 | Out-Null
+    Invoke-Native { & java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') } | Out-Null
 
     $r = Invoke-Server -Label 'baseline' -Timeout 300
     if ($r.State -ne 'ok') {
@@ -241,9 +256,9 @@ foreach ($slug in $slugs) {
     Copy-Item $PackDir $Scratch -Recurse -Force
 
     Push-Location $Scratch
-    $addOut = & $Packwiz modrinth add $slug -y 2>&1 | Out-String
+    $addOut = Invoke-Native { & $Packwiz modrinth add $slug -y }
     $addCode = $LASTEXITCODE
-    if ($addCode -eq 0) { & $Packwiz refresh 2>&1 | Out-Null }
+    if ($addCode -eq 0) { Invoke-Native { & $Packwiz refresh } | Out-Null }
     Pop-Location
 
     if ($addCode -ne 0) {
@@ -252,7 +267,7 @@ foreach ($slug in $slugs) {
         continue
     }
 
-    $installOut = & java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') 2>&1 | Out-String
+    $installOut = Invoke-Native { & java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') }
     if ($LASTEXITCODE -ne 0) {
         Write-Host 'INSTALL FAILED' -ForegroundColor Red
         $results += [pscustomobject]@{ Mod = $slug; Result = 'install-failed'; Seconds = 0; Reason = ($installOut.Trim() -replace '\s+', ' ') }
@@ -283,7 +298,7 @@ foreach ($slug in $slugs) {
 # clean the test server back to the base pack
 Remove-Item $Scratch -Recurse -Force -ErrorAction SilentlyContinue
 Copy-Item $PackDir $Scratch -Recurse -Force
-& java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') 2>&1 | Out-Null
+Invoke-Native { & java -jar $Bootstrap -g -s server --pack-folder $BootDir (Join-Path $Scratch 'pack.toml') } | Out-Null
 
 # ==========================================================================
 # report
