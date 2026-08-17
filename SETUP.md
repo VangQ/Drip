@@ -1,4 +1,4 @@
-﻿# Setup, from zero
+# Setup, from zero
 
 Work through this once. Roughly an hour total. Nothing here needs to be redone later.
 
@@ -23,7 +23,7 @@ cast's zip is 90 KB and why nothing you send them ever goes stale.
 
 ---
 
-## Part 1 â€” Put the pack on the internet
+## Part 1 — Put the pack on the internet
 
 ### 1.1 Make a GitHub account
 
@@ -31,11 +31,11 @@ Go to [github.com](https://github.com) and sign up. Free. Skip if you have one.
 
 ### 1.2 Create an empty repository
 
-On GitHub: **+** (top right) â†’ **New repository**.
+On GitHub: **+** (top right) → **New repository**.
 
-- Name: `rdc-season-2`
+- Name: `Drip`  (done — https://github.com/VangQ/Drip)
 - **Private** (nobody needs to see this)
-- **Do not** tick "Add a README" â€” the folder already has one, and ticking it causes a
+- **Do not** tick "Add a README" — the folder already has one, and ticking it causes a
   conflict on your first push
 
 Click **Create repository**.
@@ -58,10 +58,10 @@ A browser window opens to sign in to GitHub. Do it once; it remembers.
 
 ### 1.4 Put it on Netlify
 
-Go to [netlify.com](https://netlify.com) â†’ **Sign up** â†’ **GitHub** (sign in with the
+Go to [netlify.com](https://netlify.com) → **Sign up** → **GitHub** (sign in with the
 account you just made, so it can see your repo).
 
-Then: **Add new site** â†’ **Import an existing project** â†’ **GitHub** â†’ pick
+Then: **Add new site** → **Import an existing project** → **GitHub** → pick
 `rdc-season-2`.
 
 On the settings screen, one field matters:
@@ -75,13 +75,16 @@ Leave build command empty. Click **Deploy**.
 
 ### 1.5 Get your address
 
-Netlify gives you something like `spontaneous-otter-4a1b.netlify.app`. Rename it under
-**Site configuration â†’ Change site name** to something you can type â€” `rdc-s2`.
+Netlify gives you something like `astounding-axolotl-7ba147.netlify.app`. Rename it under
+**Project configuration → Project details → Change project name** — done, it's dc-drip.
+
+> Netlify also gates new projects behind a login redirect by default. If packwiz gets a 401,
+> go to **Project configuration → Visitor access** and set it to public.
 
 Your pack address is that name plus `/pack.toml`:
 
 ```
-https://rdc-s2.netlify.app/pack.toml
+https://rdc-drip.netlify.app/pack.toml
 ```
 
 **Worked when:** opening that link in a browser shows text starting with
@@ -89,26 +92,26 @@ https://rdc-s2.netlify.app/pack.toml
 
 ---
 
-## Part 2 â€” Connect your server
+## Part 2 — Connect your server
 
 ### 2.1 Find out which panel you have
 
 Log into your host's control panel. Look at the URL and the layout:
 
 - Sidebar with **Console / Files / Databases / Schedules**, address like
-  `panel.something.com/server/abc12345` â†’ **Pterodactyl**. Everything below works.
-- Looks older, says **Multicraft** â†’ no API. Skip to 2.4.
+  `panel.something.com/server/abc12345` → **Pterodactyl**. Everything below works.
+- Looks older, says **Multicraft** → no API. Skip to 2.4.
 
 ### 2.2 Get an API key (Pterodactyl only)
 
-Click your **avatar â†’ Account â†’ API Credentials**. Under "Create API Key", put
+Click your **avatar → Account → API Credentials**. Under "Create API Key", put
 `rdc-drops` as the description, leave the IP field empty, **Create**.
 
-Copy the key immediately â€” it starts with `ptlc_` and is shown exactly once.
+Copy the key immediately — it starts with `ptlc_` and is shown exactly once.
 
 ### 2.3 Get your server ID
 
-It's in your panel URL: `panel.host.com/server/`**`abc12345`** â† that part.
+It's in your panel URL: `panel.host.com/server/`**`abc12345`** ← that part.
 
 ### 2.4 Write your config file
 
@@ -118,20 +121,20 @@ Copy-Item .\scripts\config.example.ps1 .\drop.config.ps1
 
 Open `drop.config.ps1` in Notepad and fill in:
 
-- `$PackUrl` â€” your Netlify address from 1.5, ending in `/pack.toml`
-- `$PanelUrl` â€” your panel address, no trailing slash, e.g. `https://panel.bisecthosting.com`
-- `$PanelApiKey` â€” the `ptlc_â€¦` key
-- `$ServerId` â€” the short id
+- `$PackUrl` — your Netlify address from 1.5, ending in `/pack.toml`
+- `$PanelUrl` — your panel address, no trailing slash, e.g. `https://panel.bisecthosting.com`
+- `$PanelApiKey` — the `ptlc_…` key
+- `$ServerId` — the short id
 
 This file is gitignored, so the key never leaves your machine.
 
 **On Multicraft:** set `$Transport = 'sftp'` and fill in the SFTP section instead. You'll
-need an SSH key â€” if that's a wall, use `-SkipServer` on drops and upload jars through the
+need an SSH key — if that's a wall, use `-SkipServer` on drops and upload jars through the
 panel's file manager by hand. Slower, but it works.
 
 ---
 
-## Part 3 â€” Set up the server
+## Part 3 — Set up the server
 
 > **Not done yet, on purpose.** As of 2026-08-16 the BisectHosting account has three
 > servers and none of them run Minecraft:
@@ -142,18 +145,18 @@ panel's file manager by hand. Slower, but it works.
 > | `aa484274` | Kenny Server 2 | Project Zomboid |
 > | `f0aa211b` | RDC Private Server | **Palworld** |
 >
-> `f0aa211b` is the trap â€” it's named "RDC" but it's the Palworld box, and it was live
+> `f0aa211b` is the trap — it's named "RDC" but it's the Palworld box, and it was live
 > with people on it. `$ServerId` in `drop.config.ps1` is deliberately blank until a real
 > Minecraft server exists, and `drop.ps1` now refuses to upload or restart anything that
 > doesn't look like Minecraft Java.
 
 ### 3.1 Create the Minecraft server
 
-Add a new server on the panel (or repurpose one that's genuinely free â€” **not** one the
+Add a new server on the panel (or repurpose one that's genuinely free — **not** one the
 guys are playing on). In its **Startup** or **Version** tab pick **Fabric**, Minecraft
 **1.21.1**, loader **0.19.3**.
 
-If the host has no Fabric option, ask support â€” it's a normal request and they'll do it.
+If the host has no Fabric option, ask support — it's a normal request and they'll do it.
 
 ### 3.2 Boot it once
 
@@ -177,7 +180,7 @@ Everything should be green before you go further.
 powershell -ExecutionPolicy Bypass -File .\scripts\drop.ps1 -Mod fabric-api -SkipRestart
 ```
 
-Fabric API is already in the pack, so nothing new gets added â€” this just runs the sync
+Fabric API is already in the pack, so nothing new gets added — this just runs the sync
 and uploads the current mod set. That's what you want for a first run.
 
 **Worked when:** the panel's file manager shows 4 jars in `mods/`.
@@ -186,7 +189,7 @@ and uploads the current mod set. That's what you want for a first run.
 
 Upload `pairedlife-fabric-1.21.1-1.0.0.jar` into `mods/` through the panel file manager.
 
-It stays outside the pack on purpose â€” it's your own build with no download link, and the
+It stays outside the pack on purpose — it's your own build with no download link, and the
 packwiz format can only mark something server-only if it has one. The `$KeepOnServer` line
 in your config stops the sync from ever deleting it.
 
@@ -196,7 +199,7 @@ Hit Start in the panel and watch the console. You want `Done (X.XXXs)!`.
 
 ---
 
-## Part 4 â€” Send the cast their launcher
+## Part 4 — Send the cast their launcher
 
 ```bash
 powershell -ExecutionPolicy Bypass -File .\scripts\build-instance.ps1
@@ -204,16 +207,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-instance.ps1
 
 Makes `RDC-Season-2.zip` (~90 KB). Send it to the cast along with the crew brief page.
 
-Install Prism yourself too and import the same zip â€” you need to be able to test a drop
+Install Prism yourself too and import the same zip — you need to be able to test a drop
 before you ask six other people to.
 
 ---
 
-## Part 5 â€” Rehearse a drop before you need one
+## Part 5 — Rehearse a drop before you need one
 
 Do not let the first real drop be the first drop.
 
-### 5.1 Dry run â€” changes nothing
+### 5.1 Dry run — changes nothing
 
 ```bash
 powershell -ExecutionPolicy Bypass -File .\scripts\drop.ps1 -Mod carry-on -DryRun
@@ -241,7 +244,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\drop.ps1 -Remove carry-on
 ```
 
 Relaunch again and confirm it's gone. Now you've seen both directions work, and you know
-how long a drop actually takes on your connection â€” which is the number you'll be
+how long a drop actually takes on your connection — which is the number you'll be
 planning session breaks around.
 
 ---
