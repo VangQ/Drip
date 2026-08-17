@@ -40,11 +40,16 @@ $bootstrap = Join-Path $RepoRoot 'serverpack\packwiz-installer-bootstrap.jar'
 if (Test-Path $bootstrap) { Pass 'packwiz-installer-bootstrap.jar present' }
 else { Fail 'bootstrap jar missing' 'Run: .\scripts\setup-tools.ps1' }
 
-try {
-    $jv = (& java -version 2>&1 | Select-Object -First 1) -replace '"', ''
+# java -version writes to stderr. Do NOT pipe it through PowerShell's 2>&1:
+# in 5.1 that wraps each stderr line in an ErrorRecord, which under
+# $ErrorActionPreference='Stop' throws even though java exited 0 - reporting
+# "java not found" on machines where java is fine. Hand the redirect to cmd.
+$javaCmd = Get-Command java -ErrorAction SilentlyContinue
+if ($javaCmd) {
+    $jv = (cmd /c 'java -version 2>&1' | Select-Object -First 1) -replace '"', ''
     Pass "java present  ($jv)"
 }
-catch { Fail 'java not found on PATH' 'Install Java 21 (Adoptium/Temurin).' }
+else { Fail 'java not found on PATH' 'Install Java 21 (Adoptium/Temurin).' }
 
 # ---- 2. config -----------------------------------------------------------
 $cfgPath = Join-Path $RepoRoot 'drop.config.ps1'
@@ -73,10 +78,20 @@ Write-Host ''
 Write-Host '  Pack hosting' -ForegroundColor Cyan
 try {
     $r = Invoke-WebRequest -Uri $PackUrl -UseBasicParsing -TimeoutSec 20
-    if ($r.Content -match 'name\s*=\s*"([^"]+)"') {
+
+    # .toml isn't a content type PowerShell recognises as text, so Content comes
+    # back as a byte[] and every string operation on it fails. Decode it.
+    $body = $r.Content
+    if ($body -is [byte[]]) { $body = [System.Text.Encoding]::UTF8.GetString($body) }
+
+    if ($body -match 'name\s*=\s*"([^"]+)"') {
         Pass "pack.toml reachable  (pack name: $($Matches[1]))"
     }
-    else { Fail 'URL responded but does not look like a pack.toml' "Got: $($r.Content.Substring(0,[Math]::Min(60,$r.Content.Length)))" }
+    else {
+        $peek = $body -replace '\s+', ' '
+        if ($peek.Length -gt 60) { $peek = $peek.Substring(0, 60) }
+        Fail 'URL responded but does not look like a pack.toml' "Got: $peek"
+    }
 
     $cc = $r.Headers['Cache-Control']
     if ($cc -match 'max-age=(\d+)' -and [int]$Matches[1] -gt 60) {
@@ -116,11 +131,33 @@ $h = @{
 }
 
 $panelOk = $false
+
+# Catch the most common config mistake before it produces a confusing result:
+# pasting the whole address bar instead of just the domain. The panel is a
+# single-page app, so a wrong path still returns 200 with an HTML shell, and a
+# naive check reads that as success.
+if ($PanelUrl -match '/server/') {
+    Fail '$PanelUrl contains "/server/"' `
+         "Use only the domain: $(($PanelUrl -split '/server/')[0])"
+}
+elseif ($PanelUrl -match '/$') {
+    Fail '$PanelUrl has a trailing slash' "Use: $($PanelUrl.TrimEnd('/'))"
+}
+
 try {
     $srv = Invoke-RestMethod -Uri "$PanelUrl/api/client/servers/$ServerId" -Headers $h -Method Get -TimeoutSec 20
-    Pass "server reachable  ($($srv.attributes.name))"
-    Info "node: $($srv.attributes.node)  |  id: $ServerId"
-    $panelOk = $true
+
+    # Verify we got Pterodactyl JSON and not the panel's HTML shell. Without
+    # this, a wrong URL "passes" with an empty server name.
+    if ($srv.object -ne 'server' -or -not $srv.attributes.identifier) {
+        Fail 'panel answered, but not with Pterodactyl data' `
+             "$PanelUrl is probably not the API root. It should be just the domain, e.g. https://games.bisecthosting.com"
+    }
+    else {
+        Pass "server reachable  ($($srv.attributes.name))"
+        Info "node: $($srv.attributes.node)  |  id: $($srv.attributes.identifier)"
+        $panelOk = $true
+    }
 }
 catch {
     $code = $null
@@ -137,6 +174,7 @@ if ($panelOk) {
     try {
         $files = Invoke-RestMethod -Uri "$PanelUrl/api/client/servers/$ServerId/files/list?directory=/$RemoteModsDir" `
                                    -Headers $h -Method Get -TimeoutSec 20
+        if ($files.object -ne 'list') { throw "unexpected response listing $RemoteModsDir" }
         $jars = @($files.data | Where-Object { $_.attributes.name -like '*.jar' })
         Pass "$RemoteModsDir/ listed  ($($jars.Count) jar(s) there now)"
         foreach ($j in ($jars | Select-Object -First 12)) { Info $j.attributes.name }

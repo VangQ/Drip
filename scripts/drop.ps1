@@ -86,6 +86,62 @@ foreach ($required in 'PackUrl', 'PanelUrl', 'PanelApiKey', 'ServerId', 'Transpo
     }
 }
 if ($PanelApiKey -like '*REPLACE_ME*') { Die "drop.config.ps1 still has the placeholder API key in it." }
+if ($PanelUrl -match '/server/') { Die "`$PanelUrl must be just the domain, not the full address bar. Use $(($PanelUrl -split '/server/')[0])" }
+
+# --------------------------------------------------------------------------
+# Refuse to touch a server that isn't Minecraft.
+#
+# One panel account can hold servers for several games. This script uploads
+# jars, deletes files it doesn't recognise, and issues a restart - all of which
+# are destructive against the wrong target, and a running game server full of
+# other people is exactly the wrong target. A server id is one mistyped
+# character away from a different game.
+# --------------------------------------------------------------------------
+function Assert-MinecraftServer {
+    param($Headers)
+
+    if (-not $ServerId) {
+        Die "`$ServerId is blank in drop.config.ps1. Set it to your Minecraft server's id (the code in the panel URL after /server/)."
+    }
+
+    try {
+        $srv = Invoke-RestMethod -Uri "$PanelUrl/api/client/servers/$ServerId" -Headers $Headers -Method Get -TimeoutSec 20
+    }
+    catch { Die "cannot reach server '$ServerId' on $PanelUrl - $($_.Exception.Message)" }
+
+    if ($srv.object -ne 'server' -or -not $srv.attributes.identifier) {
+        Die "$PanelUrl did not return Pterodactyl data. It should be just the domain, e.g. https://games.bisecthosting.com"
+    }
+    $name = $srv.attributes.name
+
+    try {
+        $root = Invoke-RestMethod -Uri "$PanelUrl/api/client/servers/$ServerId/files/list?directory=%2F" `
+                                  -Headers $Headers -Method Get -TimeoutSec 20
+    }
+    catch { Die "cannot list the root of '$name' ($ServerId) - $($_.Exception.Message)" }
+
+    $names = @($root.data | ForEach-Object { $_.attributes.name })
+
+    # name the game we actually found, so the error is obvious rather than cryptic
+    $other = $null
+    if     ($names -contains 'PalServer.exe' -or $names -contains 'PalServer.sh') { $other = 'Palworld' }
+    elseif ($names -contains 'pzexe.jar' -or $names -match '^ProjectZomboid')      { $other = 'Project Zomboid' }
+    elseif ($names -contains 'srcds_run' -or $names -contains 'srcds.exe')         { $other = 'a Source engine game' }
+    elseif ($names -contains 'bedrock_server' -or $names -contains 'bedrock_server.exe') { $other = 'Minecraft Bedrock (this pack is Java)' }
+
+    if ($other) {
+        Die "server '$name' ($ServerId) is running $other, not Minecraft Java.`n  Refusing to upload mods or restart it. Fix `$ServerId in drop.config.ps1."
+    }
+
+    $isMinecraft = ($names -contains 'server.properties') -or
+                   ($names -contains 'mods') -or
+                   ($names -match 'fabric.*\.jar')
+    if (-not $isMinecraft) {
+        Die "server '$name' ($ServerId) has no Minecraft markers (no server.properties, no mods/, no fabric jar).`n  If it's brand new, install Fabric and start it once so those exist, then run this again."
+    }
+
+    Ok "target verified: '$name' ($ServerId) is a Minecraft server"
+}
 
 Push-Location $RepoRoot
 try {
@@ -99,7 +155,19 @@ try {
 } finally { Pop-Location }
 
 Ok "pack -> $PackUrl"
-Ok "server -> $ServerId on $PanelUrl"
+
+# Verify the target BEFORE anything is committed or pushed, so a wrong server id
+# costs you nothing instead of leaving a published pack the server never gets.
+if ($DryRun -or $SkipServer) {
+    Note "server checks skipped ($(if ($DryRun) { 'DryRun' } else { 'SkipServer' }))"
+}
+else {
+    Assert-MinecraftServer -Headers @{
+        'Authorization' = "Bearer $PanelApiKey"
+        'Accept'        = 'Application/vnd.pterodactyl.v1+json'
+        'Content-Type'  = 'application/json'
+    }
+}
 if ($DryRun) { Warn 'DRY RUN - nothing will be pushed, synced or restarted.' }
 
 # --------------------------------------------------------------------------
